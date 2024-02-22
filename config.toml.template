@@ -1,3 +1,6 @@
 ssrando = ""
 music_yaml = ""
 ost = ""
+# the wav files can take up a lot of space, but are usually generated quickly
+# set to true to still keep them
+keep_wav = false
