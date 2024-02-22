@@ -32,20 +32,21 @@ def make_ost_index():
                 index.append({ 'name': Path(f).stem, 'path': f })
     return index
 
-def ffmpeg(in_file_name, tmp_file_name, num_streams):
+def ffmpeg(in_file_name, tmp_file_name, num_streams, volume=None, delay=None):
     num_channels = num_streams * 2
-    repeatspec = '[0:a]' * num_channels
-    subprocess.call([
+    args = [
         'ffmpeg',
         '-y',
         '-i',
         in_file_name,
         '-filter_complex',
-        f'{repeatspec}amerge=inputs={num_channels}[a]',
+        f'[0:a]volume={volume or 1}, adelay=delays={delay or 0}:all=1, asplit={num_channels}, amerge=inputs={num_channels}[o]',
         '-map',
-        '[a]',
+        '[o]',
         tmp_file_name,
-    ])
+    ]
+    print(args)
+    subprocess.call(args)
 
 def time_to_samples(t):
     a = datetime.strptime(t, '%M:%S.%f')
@@ -115,12 +116,12 @@ def new_project(name: str):
         rows.append([id, gamedata['name'], '', loop_timespec, loop_timespec, None])
 
     rows.sort(key = lambda row: row[1])
-    rows.insert(0, ['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment'])
+    rows.insert(0, ['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment', 'Delay'])
     with open(f'./{name}/music.csv', 'w', encoding='utf-8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerows(rows)
 
-def get_project(name: str):
+def get_project(name: str, all=False):
     if not path.exists(f'./{name}/music.csv'):
         print(f'error: {name} is not a project')
         os.exit(1)
@@ -128,23 +129,25 @@ def get_project(name: str):
     with open(f'./{name}/music.csv', 'r', encoding='utf-8', newline='') as csvfile:
         cols = next(csvfile)
         has_volume = 'Volume Adjustment' in cols
+        has_delay = 'Delay' in cols
         reader = csv.reader(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for row in reader:
-            if row[2] != "":
+            if row[2] != "" or all:
                 songs[row[0]] = {
                     "name": row[1],
                     "source": row[2],
                     "loopstart": row[3],
                     "loopend": row[4],
-                    "volume": row[5] if has_volume else None,
+                    "volume": float(row[5]) if has_volume and row[5] != '' else None,
+                    "delay": int(row[6]) if has_delay and row[6] != '' else None,
                 }
     return songs
 
 def migrate_project(name: str):
-    project = get_project(name)
-    rows = [['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment']]
+    project = get_project(name, True)
+    rows = [['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment', 'Delay']]
     for id, song in project.items():
-        rows.append([id, song['name'], song['source'], song['loopstart'], song['loopend'], song['volume']])
+        rows.append([id, song['name'], song['source'], song['loopstart'], song['loopend'], song['volume'], song['delay']])
     with open(f'./{name}/music.csv', 'w', encoding='utf-8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerows(rows)
@@ -188,7 +191,9 @@ def build_project(name: str):
 
         loopstart = data['loopstart']
         loopend = data['loopend']
-        expected_brstm_fingerprint = f'{expected_wav_fingerprint}-{loopstart}-{loopend}'
+        vol = data['volume']
+        delay = data['delay']
+        expected_brstm_fingerprint = f'{expected_wav_fingerprint}-{loopstart}-{loopend}-{vol}-{delay}'
         brstm_fingerprint_file = path.join(tmpdir, f'{id}.brstm.fingerprint')
         rebuild_brstm = False
         brstm_file = path.join(tmpdir, f'{id}.brstm')
@@ -213,7 +218,7 @@ def build_project(name: str):
                 rebuild_wav = True
         
             if rebuild_wav:
-                ffmpeg(source_file, wav_file, streams)
+                ffmpeg(source_file, wav_file, streams, vol, delay)
                 Path(wav_fingerprint_file).write_text(expected_wav_fingerprint)
 
             if music[id]['isLooped']:
