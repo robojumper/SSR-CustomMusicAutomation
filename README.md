@@ -6,6 +6,9 @@ manually input values into janky GUIs, and rename/copy a bunch of files.
 
 This project is an attempt to automate these menial tasks and improve maintainability of music packs.
 
+This basically automates a lot of steps in CovenEsme's (fantastic) [Custom Music Written Tutorial](https://docs.google.com/document/d/1OHyxV5rZx8YuqXsf5ewp3qPz7-rpLSoRjyl3gg4fSJU/edit?usp=sharing) --
+you should probably read that document first to understand what this tool is actually doing.
+
 ## Elevator Pitch
 
 Run `convert.py new shovel_knight`, fill out the song data in `./shovel_knight/music.csv`, run `convert.py patch ./shovel_knight`,
