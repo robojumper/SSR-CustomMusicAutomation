@@ -89,14 +89,6 @@ def vgcli_noloop(tmp_file_name, out_file_name, num_streams):
         out_file_name
     ])
 
-def load_project():
-    project_index = {}
-    for f in os.listdir('./shovel_knight'):
-        f = path.join('./shovel_knight', f)
-        data = toml.load(f)
-        project_index[Path(f).stem.lower()] = { 'data': data, 'mtime': path.getmtime(f), 'used': False }
-    return project_index
-
 def load_music_yaml() -> dict:
     config = load_config()
     yaml_path = path.join(config['music_yaml'], 'music.yaml')
