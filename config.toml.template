@@ -1,5 +1,11 @@
+# create a copy of this (`config.toml.template`) file named `config.toml` and fill out data
+
+# path to the ssrando installation. Output files will be placed in modified-extract so that ssrando can pick them up.
 ssrando = ""
+# path to a folder that contains the music.yaml from the ssrando repository. Can be a clone of ssrando/ssrando
 music_yaml = ""
+# a path to a folder that contains your source files (or multiple, ost = ["...", "...", ...])
+# MP3s source files have been tested, other formats may temporarily run into ffmpeg filter pipeline problems
 ost = ""
 # the wav files can take up a lot of space, but are usually generated quickly
 # set to true to still keep them

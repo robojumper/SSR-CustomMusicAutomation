@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from zipfile import ZipFile
 import toml
 import yaml
 
@@ -264,6 +265,20 @@ def patch_project(name: str):
             if path.getmtime(pristine_file) != path.getmtime(target_file):
                 shutil.copyfile(pristine_file, target_file)
 
+def dist_project(name: str):
+    handled_ids = build_project(name)
+
+    music_yaml = load_music_yaml()
+
+    tmpdir = f'./{name}/dist'
+    os.makedirs(tmpdir, exist_ok=True)
+    with ZipFile(path.join(tmpdir, f'{name}.zip'), 'w') as zip:
+        for id in music_yaml.keys():
+            if id in handled_ids:
+                source_file = f'./{name}/tmp/{id}.brstm'
+                target_file = path.join('modified-extract', 'DATA', 'files', 'Sound', 'wzs', id)
+                zip.write(source_file, target_file)
+
 def main():
     parser = argparse.ArgumentParser(
                 prog='SSRMusicAutomation',
@@ -299,6 +314,8 @@ def main():
         patch_project(args.name)
     elif args.command == 'migrate':
         migrate_project(args.name)
+    elif args.command == 'dist':
+        dist_project(args.name)
 
 
 if __name__ == '__main__':
