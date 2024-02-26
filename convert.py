@@ -32,15 +32,25 @@ def make_ost_index():
                 index.append({ 'name': Path(f).stem, 'path': f })
     return index
 
-def ffmpeg(in_file_name, tmp_file_name, num_streams, volume=None, delay=None):
-    num_channels = num_streams * 2
+def ffmpeg(in_file_name, tmp_file_name, num_streams, volume=None, delay=None, override_streams=None):
+    num_total_channels = num_streams * 2
+    num_audio_channels = (override_streams or num_streams) * 2
+    num_silent_channels = num_total_channels - num_audio_channels
+
+    audio_channel_spec = ''.join(map(lambda i: f'[s{i}]', range(0, num_audio_channels)))
+    silent_channel_spec = '[1:a]' * num_silent_channels
+
     args = [
         'ffmpeg',
         '-y',
         '-i',
         in_file_name,
+        '-f',
+        'lavfi',
+        '-i',
+        'anullsrc=channel_layout=mono:sample_rate=44100',
         '-filter_complex',
-        f'[0:a]volume={volume or 1}, adelay=delays={delay or 0}:all=1, asplit={num_channels}, amerge=inputs={num_channels}[o]',
+        f'[0:a]volume={volume or 1}, adelay=delays={delay or 0}:all=1, asplit={num_audio_channels}{audio_channel_spec}; {audio_channel_spec}{silent_channel_spec}amerge=inputs={num_total_channels}[o]',
         '-map',
         '[o]',
         tmp_file_name,
@@ -102,6 +112,8 @@ def resolve(index, id, name: str):
         if short_name in index:
             return index[short_name]
         
+COLUMNS = ['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment', 'Delay', 'Override Streams']
+        
 def new_project(name: str):
     if path.exists(f'./{name}'):
         print(f'error: directory {name} already exists')
@@ -116,7 +128,7 @@ def new_project(name: str):
         rows.append([id, gamedata['name'], '', loop_timespec, loop_timespec, None])
 
     rows.sort(key = lambda row: row[1])
-    rows.insert(0, ['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment', 'Delay'])
+    rows.insert(0, COLUMNS)
     with open(f'./{name}/music.csv', 'w', encoding='utf-8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerows(rows)
@@ -130,6 +142,7 @@ def get_project(name: str, all=False):
         cols = next(csvfile)
         has_volume = 'Volume Adjustment' in cols
         has_delay = 'Delay' in cols
+        has_override_streams = 'Override Streams' in cols
         reader = csv.reader(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for row in reader:
             if row[2] != "" or all:
@@ -140,14 +153,15 @@ def get_project(name: str, all=False):
                     "loopend": row[4],
                     "volume": float(row[5]) if has_volume and row[5] != '' else None,
                     "delay": int(row[6]) if has_delay and row[6] != '' else None,
+                    "streams_override": int(row[7]) if has_override_streams and row[7] != '' else None,
                 }
     return songs
 
 def migrate_project(name: str):
     project = get_project(name, True)
-    rows = [['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment', 'Delay']]
+    rows = [COLUMNS]
     for id, song in project.items():
-        rows.append([id, song['name'], song['source'], song['loopstart'], song['loopend'], song['volume'], song['delay']])
+        rows.append([id, song['name'], song['source'], song['loopstart'], song['loopend'], song['volume'], song['delay'], song['streams_override']])
     with open(f'./{name}/music.csv', 'w', encoding='utf-8', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerows(rows)
@@ -193,7 +207,8 @@ def build_project(name: str):
         loopend = data['loopend']
         vol = data['volume']
         delay = data['delay']
-        expected_brstm_fingerprint = f'{expected_wav_fingerprint}-{loopstart}-{loopend}-{vol}-{delay}'
+        override_streams = data['streams_override']
+        expected_brstm_fingerprint = f'{expected_wav_fingerprint}-{loopstart}-{loopend}-{vol}-{delay}-{override_streams}'
         brstm_fingerprint_file = path.join(tmpdir, f'{id}.brstm.fingerprint')
         rebuild_brstm = False
         brstm_file = path.join(tmpdir, f'{id}.brstm')
@@ -218,7 +233,7 @@ def build_project(name: str):
                 rebuild_wav = True
         
             if rebuild_wav:
-                ffmpeg(source_file, wav_file, streams, vol, delay)
+                ffmpeg(source_file, wav_file, streams, vol, delay, override_streams)
                 Path(wav_fingerprint_file).write_text(expected_wav_fingerprint)
 
             if music[id]['isLooped']:
