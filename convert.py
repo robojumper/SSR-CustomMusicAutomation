@@ -250,7 +250,8 @@ def patch_project(name: str):
 
         if id in handled_ids:
             source_file = f'./{name}/tmp/{id}.brstm'
-            shutil.copyfile(source_file, target_file)
+            if path.getmtime(source_file) != path.getmtime(target_file):
+                shutil.copyfile(source_file, target_file)
         else:
             # reset all other files
             pristine_file = path.join(config['ssrando'], 'actual-extract', 'DATA', 'files', 'Sound', 'wzs', id)
