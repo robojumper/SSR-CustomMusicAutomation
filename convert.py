@@ -110,7 +110,7 @@ COLUMNS = ['Id', 'Name', 'Source', 'Loop Start', 'Loop End', 'Volume Adjustment'
 def new_project(name: str):
     if path.exists(f'./{name}'):
         print(f'error: directory {name} already exists')
-        os.exit(1)
+        exit(1)
 
     os.makedirs(f'./{name}')
     music_yaml = load_music_yaml()
@@ -129,7 +129,7 @@ def new_project(name: str):
 def get_project(name: str, all=False):
     if not path.exists(f'./{name}/music.csv'):
         print(f'error: {name} is not a project')
-        os.exit(1)
+        exit(1)
     songs = {}
     with open(f'./{name}/music.csv', 'r', encoding='utf-8', newline='') as csvfile:
         cols = next(csvfile)
