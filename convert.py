@@ -175,8 +175,8 @@ def build_project(name: str):
             continue
 
         source = data['source']
-        if source.startswith('$'):
-            data = next((x for x in project.values() if x['name'] == source[1:] and x['source'] and not x['source'].startswith('$')), None)
+        while source.startswith('$'):
+            data = next((x for x in project.values() if x['name'] == source[1:]), None)
             if not data:
                 print(f'error: source redirection {source} not found')
                 continue
@@ -224,16 +224,20 @@ def build_project(name: str):
             elif Path(wav_fingerprint_file).read_text() != expected_wav_fingerprint:
                 # the WAV fingerprint is wrong - must rebuild 
                 rebuild_wav = True
-        
-            if rebuild_wav:
-                ffmpeg(source_file, wav_file, streams, vol, delay, override_streams)
-                Path(wav_fingerprint_file).write_text(expected_wav_fingerprint)
 
-            if music[id]['isLooped']:
-                vgcli_loop(wav_file, brstm_file, streams, loopstart, loopend)
-            else:
-                vgcli_noloop(wav_file, brstm_file, streams)
-            Path(brstm_fingerprint_file).write_text(expected_brstm_fingerprint)
+            try:
+                if rebuild_wav:
+                    ffmpeg(source_file, wav_file, streams, vol, delay, override_streams)
+                    Path(wav_fingerprint_file).write_text(expected_wav_fingerprint)
+
+                if music[id]['isLooped']:
+                    vgcli_loop(wav_file, brstm_file, streams, loopstart, loopend)
+                else:
+                    vgcli_noloop(wav_file, brstm_file, streams)
+                Path(brstm_fingerprint_file).write_text(expected_brstm_fingerprint)
+            except Exception as e:
+                print('error handling ' + id + ' ' + str(e))
+                continue
 
         if not config['keep_wav'] and path.exists(wav_file):
             os.remove(wav_file)
