@@ -11,7 +11,7 @@ you should probably read that document first to understand what this tool is act
 
 ## Elevator Pitch
 
-Run `convert.py new shovel_knight`, fill out the song data in `./shovel_knight/music.csv`, run `convert.py patch ./shovel_knight`,
+Run `convert.py new shovel_knight`, fill out the song data in `./shovel_knight/music.csv`, run `convert.py patch shovel_knight`,
 start the game in Dolphin, and you're done.
 
 ```csv
