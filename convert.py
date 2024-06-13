@@ -270,11 +270,15 @@ def dist_project(name: str):
     tmpdir = f'./{name}/dist'
     os.makedirs(tmpdir, exist_ok=True)
     with ZipFile(path.join(tmpdir, f'{name}.zip'), 'w') as zip:
-        for id in music_yaml.keys():
-            if id in handled_ids:
-                source_file = f'./{name}/tmp/{id}.brstm'
-                target_file = path.join('modified-extract', 'DATA', 'files', 'Sound', 'wzs', id)
-                zip.write(source_file, target_file)
+        with ZipFile(path.join(tmpdir, f'{name}_hd.zip'), 'w') as hd_zip:
+            for id in music_yaml.keys():
+                if id in handled_ids:
+                    source_file = f'./{name}/tmp/{id}.brstm'
+                    target_file = path.join('modified-extract', 'DATA', 'files', 'Sound', 'wzs', id)
+                    zip.write(source_file, target_file)
+
+                    target_file_hd = path.join('romfs', 'Sound', 'wzs', id)
+                    hd_zip.write(source_file, target_file_hd)
 
 def main():
     parser = argparse.ArgumentParser(
